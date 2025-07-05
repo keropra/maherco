@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>التحكم في الشات</title>
+    <style>
+        body {
+            font-family: Arial;
+            text-align: center;
+            margin-top: 30px;
+        }
+        button, input {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+        }
+        .box {
+            border: 2px solid black;
+            padding: 20px;
+            display: inline-block;
+            margin: 20px;
+        }
+        #timer {
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        #logArea {
+            text-align: right;
+            max-height: 300px;
+            overflow-y: auto;
+            background: #f9f9f9;
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-top: 20px;
+            direction: rtl;
+        }
+        #roundCounter {
+            font-size: 18px;
+            margin-top: 10px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="box">
+        <h3>تشغيل الكل</h3>
+        <h3>Maherco</h3>
+        <button onclick="startAll()">تشغيل الكل</button>
+        <button onclick="stopAll()">إيقاف الكل</button>
+        <div id="timer">00</div>
+    </div>
+
+    <div class="box"><h3>Omar_Youssef12</h3><input id="msg1"><br><button onclick="sendToAccount(1)">تشغيل بمفرده</button></div>
+    <div class="box"><h3>Tariq_Hassan845</h3><input id="msg2"><br><button onclick="sendToAccount(2)">تشغيل بمفرده</button></div>
+    <div class="box"><h3>Medo_com10</h3><input id="msg3"><br><button onclick="sendToAccount(3)">تشغيل بمفرده</button></div>
+    <div class="box"><h3>egypt12</h3><input id="msg4"><br><button onclick="sendToAccount(4)">تشغيل بمفرده</button></div>
+    <div class="box"><h3>Zaid_Khalil023</h3><input id="msg5"><br><button onclick="sendToAccount(5)">تشغيل بمفرده</button></div>
+    <div class="box"><h3>ahmed_maher48</h3><input id="msg6"><br><button onclick="sendToAccount(6)">تشغيل بمفرده</button></div>
+
+    <div class="box" style="width: 90%;">
+        <h3>تقرير الإرسال</h3>
+        <div id="roundCounter">عدد الدورات: 0</div>
+        <div id="logArea"></div>
+    </div>
+
+    <script>
+        let timer = null;
+        let seconds = 300;
+        let logInterval = null;
+        let cycleChecker = null;
+        let roundCount = 0;
+
+        function startAll() {
+            fetch('/start_all', { method: 'POST' });
+            startLogUpdates();
+            checkCycleAndStartCountdown();
+        }
+
+        function stopAll() {
+            fetch('/stop_all', { method: 'POST' });
+            clearInterval(timer);
+            clearInterval(logInterval);
+            clearInterval(cycleChecker);
+            document.getElementById("timer").innerText = "00";
+        }
+
+        function startCountdown() {
+            clearInterval(timer);
+            seconds = 300;
+            document.getElementById("timer").innerText = seconds;
+            timer = setInterval(() => {
+                seconds--;
+                document.getElementById("timer").innerText = seconds;
+                if (seconds <= 0) clearInterval(timer);
+            }, 1000);
+        }
+
+        function checkCycleAndStartCountdown() {
+            let lastCycle = 0;
+            cycleChecker = setInterval(() => {
+                fetch('/last_cycle_time')
+                    .then(res => res.json())
+                    .then(data => {
+                        const cycleTime = data.time;
+                        if (cycleTime !== 0 && cycleTime !== lastCycle) {
+                            lastCycle = cycleTime;
+                            roundCount++;
+                            document.getElementById("roundCounter").innerText = "عدد الدورات: " + roundCount;
+                            startCountdown();
+                        }
+                    });
+            }, 1000); // تقليل التأخير لتكون المزامنة أسرع
+        }
+
+        function sendToAccount(account) {
+            const msg = document.getElementById(`msg${account}`).value;
+            fetch(`/send/${account}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: msg })
+            });
+        }
+
+        function startLogUpdates() {
+            logInterval = setInterval(() => {
+                fetch('/logs')
+                    .then(res => res.json())
+                    .then(data => {
+                        const logDiv = document.getElementById("logArea");
+                        logDiv.innerHTML = "";
+                        data.forEach(round => {
+                            logDiv.innerHTML += "<hr><b>" + round[0] + "</b><br>";
+                            for (let i = 1; i < round.length; i++) {
+                                logDiv.innerHTML += "• " + round[i] + "<br>";
+                            }
+                        });
+                    });
+            }, 4000);
+        }
+    </script>
+
+</body>
+</html>
